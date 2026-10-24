@@ -8,7 +8,9 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.BatteryManager
@@ -29,6 +31,9 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.MediaController
+import android.widget.ScrollView
+import android.widget.VideoView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -76,6 +81,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var nutToc: Button
     private lateinit var nutQuay: Button
     private lateinit var nutVideo: Button
+    private lateinit var nutAnhGoc: Button
+    @Volatile private var yeuCauAnhGoc = false
 
     private val boXuLy = Executors.newSingleThreadExecutor()
     private val luongVe = HandlerThread("VeKhungVaoVideo").apply { start() }
@@ -87,6 +94,7 @@ class MainActivity : ComponentActivity() {
     private var camera: Camera? = null
     private var quayHienTai: Recording? = null
     private var quayBatDauLuc = 0L
+    @Volatile private var chiMucDangQuay: ChiMucAI? = null
     private var tenVideoDangQuay = ""
     private var ghiAmDangBat = false
     @Volatile private var coTheQuetKhiQuay = false
@@ -119,7 +127,7 @@ class MainActivity : ComponentActivity() {
             val giay = (SystemClock.elapsedRealtime() - quayBatDauLuc) / 1000L
             trangThaiQuay.text = "● ĐANG QUAY  %02d:%02d".format(Locale.US, giay / 60, giay % 60) +
                 (if (ghiAmDangBat) "  • Có tiếng" else "  • Không tiếng") +
-                "  • Khung AI lưu trong MP4"
+                "  • ${chiMucDangQuay?.danhSach()?.size ?: 0} mốc xác chuột"
             boDemGio.postDelayed(this, 500L)
         }
     }
@@ -140,6 +148,12 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { duoc ->
             if (duoc) kiemTraQuyenAmThanh()
             else thongBao("Để lưu video vào thư viện trên Android 7–9, hãy cấp quyền Bộ nhớ.")
+        }
+
+    private val xinQuyenAnhGoc =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { duoc ->
+            if (duoc) datYeuCauAnhGoc()
+            else thongBao("Cần quyền Bộ nhớ để lưu ảnh gốc vào thư viện trên Android 7–9.")
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -218,6 +232,9 @@ class MainActivity : ComponentActivity() {
         nutToc.setOnClickListener { doiToc() }
         hangPhu.addView(nutToc, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
         bangNut.addView(hangPhu, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        nutAnhGoc = taoNut("📷 CHỤP ẢNH GỐC ĐỂ HUẤN LUYỆN", Color.rgb(48, 118, 78))
+        nutAnhGoc.setOnClickListener { yeuCauChupAnhGoc() }
+        bangNut.addView(nutAnhGoc, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
 
         goc.addView(bangNut, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT, Gravity.BOTTOM))
         setContentView(goc)
@@ -383,6 +400,7 @@ class MainActivity : ComponentActivity() {
                 when (suKien) {
                     is VideoRecordEvent.Start -> {
                         quayBatDauLuc = SystemClock.elapsedRealtime()
+                        chiMucDangQuay = ChiMucAI(quayBatDauLuc)
                         nutQuay.text = "■ DỪNG QUAY"
                         nutQuay.isEnabled = coTheQuetKhiQuay
                         trangThaiQuay.text = if (coAmThanh) "● ĐANG QUAY có âm thanh" else "● ĐANG QUAY không âm thanh"
@@ -392,6 +410,8 @@ class MainActivity : ComponentActivity() {
                     is VideoRecordEvent.Finalize -> {
                         boDemGio.removeCallbacks(dongHo)
                         quayHienTai = null
+                        val cacMocQuay = chiMucDangQuay?.danhSach().orEmpty()
+                        chiMucDangQuay = null
                         quayBatDauLuc = 0L
                         dangDungQuay = false
                         nutQuay.text = "● BẮT ĐẦU QUAY"
@@ -399,8 +419,10 @@ class MainActivity : ComponentActivity() {
                         if (!suKien.hasError()) {
                             val uri = suKien.outputResults.outputUri
                             if (uri != Uri.EMPTY) {
-                                themVideoDaLuu(uri, tenVideoDangQuay)
-                                trangThaiQuay.text = "Đã lưu: $tenVideoDangQuay"
+                                themVideoDaLuu(uri, tenVideoDangQuay, cacMocQuay)
+                                val daLuuCsv = luuBangMocTuDong(tenVideoDangQuay, cacMocQuay)
+                                trangThaiQuay.text = "Đã lưu: $tenVideoDangQuay (${cacMocQuay.size} mốc AI)" +
+                                    (if (daLuuCsv) " • Mốc CSV: Download/ThuXacChuot" else " • Chưa lưu CSV, dùng mục Xuất mốc")
                                 Toast.makeText(this, "Đã lưu video vào thư viện!", Toast.LENGTH_LONG).show()
                             } else {
                                 trangThaiQuay.text = "Không nhận được đường dẫn video đã lưu"
@@ -413,6 +435,7 @@ class MainActivity : ComponentActivity() {
             }
         } catch (e: Exception) {
             quayHienTai = null
+            chiMucDangQuay = null
             nutQuay.isEnabled = coTheQuetKhiQuay
             nutQuay.text = "● BẮT ĐẦU QUAY"
             trangThaiQuay.text = "Không thể bắt đầu quay AI: ${e.message}"
@@ -425,7 +448,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // Danh sách chỉ chứa video do chính ứng dụng này quay, không cần quyền đọc thư viện.
-    private data class VideoDaLuu(val uri: Uri, val ten: String)
+    private data class VideoDaLuu(val uri: Uri, val ten: String, val cacMoc: List<MocAI> = emptyList())
     private val tenPrefs = "thu_xac_chuot_video"
     private val khoaDanhSach = "danh_sach"
 
@@ -436,7 +459,13 @@ class MainActivity : ComponentActivity() {
             val mang = JSONArray(raw)
             for (i in 0 until mang.length()) {
                 val item = mang.getJSONObject(i)
-                ketQua.add(VideoDaLuu(Uri.parse(item.getString("uri")), item.getString("ten")))
+                val mocJson = item.optJSONArray("cacMoc") ?: JSONArray()
+                val moc = mutableListOf<MocAI>()
+                for (j in 0 until mocJson.length()) {
+                    val obj = mocJson.optJSONObject(j) ?: continue
+                    moc.add(MocAI(obj.optLong("viTriMs", 0L), obj.optDouble("tinCay", 0.0).toFloat(), obj.optString("nhan", "chuot_chet")))
+                }
+                ketQua.add(VideoDaLuu(Uri.parse(item.getString("uri")), item.getString("ten"), moc))
             }
         } catch (_: Exception) { /* Nội dung cũ bị lỗi: bỏ qua, không crash */ }
         return ketQua
@@ -445,18 +474,25 @@ class MainActivity : ComponentActivity() {
     private fun luuDanhSachVideo(danhSach: List<VideoDaLuu>) {
         val mang = JSONArray()
         danhSach.forEach { video ->
-            mang.put(JSONObject().put("uri", video.uri.toString()).put("ten", video.ten))
+            val cacMoc = JSONArray()
+            video.cacMoc.forEach { m -> cacMoc.put(JSONObject()
+                .put("viTriMs", m.viTriMs).put("tinCay", m.tinCay.toDouble()).put("nhan", m.nhan)) }
+            mang.put(JSONObject().put("uri", video.uri.toString()).put("ten", video.ten).put("cacMoc", cacMoc))
         }
         getSharedPreferences(tenPrefs, MODE_PRIVATE).edit().putString(khoaDanhSach, mang.toString()).apply()
     }
 
-    private fun themVideoDaLuu(uri: Uri, ten: String) {
+    private fun themVideoDaLuu(uri: Uri, ten: String, cacMoc: List<MocAI>) {
         val danhSach = layDanhSachVideo()
-        danhSach.add(0, VideoDaLuu(uri, ten))
+        danhSach.add(0, VideoDaLuu(uri, ten, cacMoc))
         luuDanhSachVideo(danhSach)
     }
 
     private fun moDanhSachVideo() {
+        if (quayHienTai != null) {
+            thongBao("Hãy dừng và lưu video hiện tại trước khi xem lại.")
+            return
+        }
         val ds = layDanhSachVideo()
         if (ds.isEmpty()) {
             thongBao("Chưa có video nào. Bấm BẮT ĐẦU QUAY để tạo video.")
@@ -464,7 +500,7 @@ class MainActivity : ComponentActivity() {
         }
         AlertDialog.Builder(this)
             .setTitle("Video đã quay (${ds.size})")
-            .setItems(ds.map { it.ten }.toTypedArray()) { _, i -> chonVideo(ds[i]) }
+            .setItems(ds.map { "${it.ten}  •  ${it.cacMoc.size} mốc" }.toTypedArray()) { _, i -> chonVideo(ds[i]) }
             .setNegativeButton("Đóng", null)
             .show()
     }
@@ -472,15 +508,9 @@ class MainActivity : ComponentActivity() {
     private fun chonVideo(video: VideoDaLuu) {
         AlertDialog.Builder(this)
             .setTitle(video.ten)
-            .setItems(arrayOf("▶ Xem video", "↗ Chia sẻ video", "Xóa video")) { _, i ->
+            .setItems(arrayOf("▶ Xem + nhảy đến mốc AI", "↗ Chia sẻ video", "Xuất danh sách mốc CSV", "Xóa video")) { _, i ->
                 when (i) {
-                    0 -> try {
-                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                            setDataAndType(video.uri, "video/mp4")
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
-                        startActivity(intent)
-                    } catch (e: Exception) { thongBao("Không mở được video: ${e.message}") }
+                    0 -> moTrinhPhatCoMoc(video)
                     1 -> try {
                         val intent = Intent(Intent.ACTION_SEND).apply {
                             type = "video/mp4"
@@ -490,7 +520,8 @@ class MainActivity : ComponentActivity() {
                         }
                         startActivity(Intent.createChooser(intent, "Chia sẻ video"))
                     } catch (e: Exception) { thongBao("Không chia sẻ được: ${e.message}") }
-                    2 -> AlertDialog.Builder(this)
+                    2 -> xuatMocCsv(video)
+                    3 -> AlertDialog.Builder(this)
                         .setTitle("Xóa video?")
                         .setMessage("Xóa vĩnh viễn ${video.ten} khỏi điện thoại?")
                         .setPositiveButton("Xóa") { _, _ ->
@@ -508,6 +539,172 @@ class MainActivity : ComponentActivity() {
             .show()
     }
 
+    private fun yeuCauChupAnhGoc() {
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P &&
+            !coQuyen(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+            xinQuyenAnhGoc.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        } else datYeuCauAnhGoc()
+    }
+
+    private fun datYeuCauAnhGoc() {
+        yeuCauAnhGoc = true
+        thongBao("Đã yêu cầu chụp: ảnh gốc sẽ được lưu ở khung camera tiếp theo, không có khung AI.")
+    }
+
+    /** Ảnh RGB lấy từ ImageAnalysis KHÔNG bị OverlayEffect vẽ đè, dùng làm dữ liệu gán nhãn. */
+    private fun luuAnhGoc(anh: Bitmap, xoayDo: Int) {
+        var uri: Uri? = null
+        try {
+            val ten = "Goc_Chuot_${SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US).format(Date())}.jpg"
+            val values = ContentValues().apply {
+                put(MediaStore.Images.Media.DISPLAY_NAME, ten)
+                put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, "Pictures/ThuXacChuot/DuLieuHuanLuyen")
+                    put(MediaStore.MediaColumns.IS_PENDING, 1)
+                } else {
+                    @Suppress("DEPRECATION")
+                    val folder = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
+                        "ThuXacChuot/DuLieuHuanLuyen")
+                    if (!folder.exists() && !folder.mkdirs()) error("Không thể tạo thư mục ảnh")
+                    put(MediaStore.Images.Media.DATA, File(folder, ten).absolutePath)
+                }
+            }
+            uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                ?: error("Không thể tạo ảnh trong MediaStore")
+            val doXoay = ((xoayDo % 360) + 360) % 360
+            val thang = if (doXoay == 0) anh else Bitmap.createBitmap(
+                anh, 0, 0, anh.width, anh.height, Matrix().apply { postRotate(doXoay.toFloat()) }, true)
+            contentResolver.openOutputStream(uri)?.use { stream ->
+                if (!thang.compress(Bitmap.CompressFormat.JPEG, 92, stream)) error("Không nén được JPEG")
+            } ?: error("Không ghi được file ảnh")
+            if (thang !== anh) thang.recycle()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                contentResolver.update(uri, ContentValues().apply {
+                    put(MediaStore.MediaColumns.IS_PENDING, 0)
+                }, null, null)
+            }
+            hienThongBaoAnh("Đã lưu ảnh GỐC: Thư viện → Pictures/ThuXacChuot/DuLieuHuanLuyen")
+        } catch (e: Exception) {
+            uri?.let { runCatching { contentResolver.delete(it, null, null) } }
+            hienThongBaoAnh("Không lưu được ảnh huấn luyện: ${e.message}")
+        }
+    }
+
+    private fun hienThongBaoAnh(s: String) = runOnUiThread { if (!isDestroyed) thongBao(s) }
+
+    /** Phát ngay video trong app; chạm mốc sẽ nhảy đến 2 giây trước lúc AI nhìn thấy chuột. */
+    private fun moTrinhPhatCoMoc(video: VideoDaLuu) {
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+        }
+        val phat = VideoView(this)
+        root.addView(phat, LinearLayout.LayoutParams(MATCH_PARENT, dp(225)))
+        val dieuKhien = MediaController(this)
+        dieuKhien.setAnchorView(phat)
+        phat.setMediaController(dieuKhien)
+        val moTa = TextView(this).apply {
+            text = if (video.cacMoc.isEmpty())
+                "Video chưa có chỉ mục AI. Bản cũ không thể tự tạo mốc nếu chưa phân tích lại video."
+            else "Chạm mốc để tua trước 2 giây. Mốc do AI dự đoán, chưa xác minh."
+            textSize = 13f
+            setPadding(dp(6), dp(8), dp(6), dp(6))
+        }
+        root.addView(moTa)
+        val khuMoc = ScrollView(this)
+        val dsNut = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val cacMoc = video.cacMoc.sortedBy { it.viTriMs }
+        cacMoc.forEachIndexed { index, moc ->
+            val btn = Button(this).apply {
+                isAllCaps = false
+                text = "${index + 1}. ${dinhDangGio(moc.viTriMs)} • ${moc.nhan} (${(moc.tinCay * 100).toInt()}%)"
+                textSize = 13f
+                setOnClickListener {
+                    phat.seekTo((moc.viTriMs - 2000L).coerceAtLeast(0L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+                    phat.start()
+                }
+            }
+            dsNut.addView(btn, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        }
+        khuMoc.addView(dsNut)
+        root.addView(khuMoc, LinearLayout.LayoutParams(MATCH_PARENT, dp(190)))
+        val hop = AlertDialog.Builder(this)
+            .setTitle("Các lần AI phát hiện: ${video.cacMoc.size}")
+            .setView(root)
+            .setPositiveButton("Đóng", null)
+            .create()
+        phat.setOnPreparedListener { phat.start() }
+        phat.setOnErrorListener { _, _, _ ->
+            moTa.text = "Không phát được video này. Bạn vẫn có thể dùng mục Chia sẻ video."
+            true
+        }
+        hop.setOnDismissListener { phat.stopPlayback() }
+        hop.show()
+        try { phat.setVideoURI(video.uri) }
+        catch (e: Exception) { moTa.text = "Không mở được MP4: ${e.message}" }
+    }
+
+    private fun dinhDangGio(ms: Long): String {
+        val s = (ms / 1000L).coerceAtLeast(0)
+        return "%02d:%02d:%02d".format(Locale.US, s / 3600L, (s / 60L) % 60L, s % 60L)
+    }
+
+    /** CSV do AI tạo chỉ là gợi ý, không phải nhãn huấn luyện do người xác minh. */
+    private fun taoCsv(tenVideo: String, danhSach: List<MocAI>) = buildString {
+        append("video,time_seconds,label,confidence,verified\n")
+        danhSach.forEach { m ->
+            append("\"").append(tenVideo.replace("\"", "\"\"")).append("\",")
+            append("%.3f".format(Locale.US, m.viTriMs / 1000.0)).append(',')
+            append(m.nhan).append(',')
+            append("%.3f".format(Locale.US, m.tinCay)).append(",no\n")
+        }
+    }
+
+    /** Lưu bản sao chỉ mục dễ sao chép về máy tính (không nhúng vào MP4). */
+    private fun luuBangMocTuDong(tenVideo: String, moc: List<MocAI>): Boolean {
+        val ten = tenVideo.removeSuffix(".mp4") + "_MocAI.csv"
+        val csv = taoCsv(tenVideo, moc)
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val data = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, ten)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "text/csv")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, "Download/ThuXacChuot")
+                    put(MediaStore.MediaColumns.IS_PENDING, 1)
+                }
+                val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, data)
+                    ?: error("Không thể tạo CSV")
+                try {
+                    contentResolver.openOutputStream(uri)?.bufferedWriter(Charsets.UTF_8)?.use { it.write(csv) }
+                        ?: error("Không thể ghi CSV")
+                    contentResolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
+                } catch (e: Exception) {
+                    runCatching { contentResolver.delete(uri, null, null) }
+                    throw e
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                val thuMuc = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "ThuXacChuot")
+                if (!thuMuc.exists() && !thuMuc.mkdirs()) error("Không tạo được thư mục CSV")
+                File(thuMuc, ten).writeText(csv, Charsets.UTF_8)
+            }
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun xuatMocCsv(video: VideoDaLuu) {
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "Mốc AI - ${video.ten}")
+            putExtra(Intent.EXTRA_TEXT, taoCsv(video.ten, video.cacMoc))
+        }
+        try { startActivity(Intent.createChooser(intent, "Gửi/sao chép bảng mốc (CSV)")) }
+        catch (e: Exception) { thongBao("Không xuất được mốc: ${e.message}") }
+    }
+
     // Chạy trên một luồng riêng, giữ logic AI hiện tại không thay đổi.
     private fun phanTichKhung(anh: ImageProxy) {
         try {
@@ -517,8 +714,14 @@ class MainActivity : ComponentActivity() {
             lanQuetCuoi = bay
             val bo = layBoPhatHien() ?: return
             val anhBitmap = anh.toBitmap()
+            if (yeuCauAnhGoc) {
+                yeuCauAnhGoc = false
+                luuAnhGoc(anhBitmap, anh.imageInfo.rotationDegrees)
+            }
             val kq = bo.quet(anhBitmap, anh.imageInfo.rotationDegrees)
             khungVideo?.capNhat(kq, anh) // Tọa độ cảm biến cho OverlayEffect => lưu vào MP4.
+            val diemChuot = kq.khung.asSequence().filter { it.lop == 0 }.maxOfOrNull { it.tinCay }
+            chiMucDangQuay?.nhanKetQua(SystemClock.elapsedRealtime(), diemChuot)
             capNhatSoDo(kq, bo)
         } catch (e: Throwable) {
             loiNap = "${e.javaClass.simpleName}: ${e.message}"

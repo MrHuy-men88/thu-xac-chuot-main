@@ -1,0 +1,24 @@
+BẢN 0.4: CAMERA AI + MỐC PHÁT HIỆN + DỮ LIỆU HUẤN LUYỆN
+
+THAY ĐỔI SO VỚI 0.3:
+- Bổ sung ChiMucAI.kt: xác nhận qua 2 lần quét, ngưỡng độ tin cậy 45%, gộp detections liền nhau.
+- Mỗi video mới được ghi thêm danh sách mốc AI để người dùng chạm -> tua đến trước sự kiện 2 giây.
+- Lưu tự động tệp mốc CSV ở Download/ThuXacChuot (khi quyền và dung lượng cho phép).
+- Thêm mục xem + nhảy đến mốc, xuất CSV và nút chụp ảnh sạch JPEG để thu thập dữ liệu huấn luyện.
+- Bổ sung hướng dẫn dùng video mới để trích ảnh, gán nhãn rồi huấn luyện bằng checkpoint gốc trên máy tính/Colab.
+- Giữ camera + AI + video overlay của bản 0.3, mô hình lan3.tflite hiện có.
+
+GIỚI HẠN:
+- Mốc chỉ được tạo cho video QUAY MỚI bằng ứng dụng bản 0.4; video cũ không có mốc dù có khung đỏ.
+- Mốc là suy luận AI, có thể bị dương tính giả và không khớp tuyệt đối với timestamp codec.
+- Danh sách mốc cho UI lưu vào dữ liệu app; CSV bản sao không tự nhập lại vào app.
+- Nút chụp ảnh gốc chụp ở độ phân giải luồng phân tích (khoảng 640x360), không phải ảnh camera full-res.
+- Không thể tự huấn luyện tệp .tflite trực tiếp trên Samsung S7 edge; cần checkpoint và bộ dữ liệu được gán nhãn.
+- Chưa chạy build Android end-to-end hoặc test trên Samsung S7 edge. Nếu lỗi GitHub build, gửi log.
+
+CÁCH NÂNG CẤP:
+1. Giải nén ZIP, mở bên trong thư mục thu-xac-chuot-main.
+2. Upload TOÀN BỘ NỘI DUNG bên trong (không lồng thêm một thư mục) lên repository GitHub cũ và commit.
+3. Actions -> Build APK -> tải artifacts app-debug-apk nếu thành công.
+4. Mở camera, ghi thử video có phát hiện, dừng, xem VIDEO ĐÃ LƯU -> Xem + nhảy đến mốc AI.
+5. Xem thêm HUONG_DAN_MOC_AI_VA_HUAN_LUYEN.md.

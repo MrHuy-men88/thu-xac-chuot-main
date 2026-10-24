@@ -15,11 +15,11 @@ Bản **0.3** thay thế bản thử tốc độ và bản quay video thường 
 - Một số điện thoại cũ (có thể bao gồm **Samsung S7 Edge**) không hỗ trợ đồng thời camera preview, quay video, phân tích AI và xử lý overlay. Ứng dụng thử HD, rồi SD. Nếu vẫn không được, **nút quay bị khóa**, AI vẫn hoạt động trên màn hình. App KHÔNG ghi video trơn và giả làm video AI.
 - AI có thể báo sai. Khung là kết quả dự đoán, không phải xác nhận chắc chắn.
 - AI chạy chậm có thể làm khung trong MP4 trễ so với chuyển động; video sử dụng kết quả phân tích mới nhất khi vẽ.
-- Chưa quay video nền, chưa có nút chụp ảnh tĩnh; chưa thử build và thử quay trực tiếp trên S7 Edge trong môi trường này.
+- Không quay video nền. Bản 0.4 có nút chụp ảnh gốc JPEG để chuẩn bị huấn luyện; chưa thử build và thử quay trực tiếp trên S7 Edge trong môi trường này.
 
 ## Cập nhật dự án GitHub
 
-1. Giải nén tệp `thu-xac-chuot-AI-ghi-khung-trong-video.zip`.
+1. Giải nén ZIP bản mới `thu-xac-chuot-AI-co-moc-va-huan-luyen.zip`.
 2. Vào bên trong thư mục `thu-xac-chuot-main` vừa giải nén. Kiểm tra có `.github`, `app`, `build.gradle.kts`, `settings.gradle.kts`, `gradle.properties`.
 3. Vào repository `thu-xac-chuot` trên GitHub, chọn nhánh `main`, nhấn **Add file → Upload files**.
 4. Tải lên **nội dung** của `thu-xac-chuot-main` (giữ nguyên đường dẫn thư mục); thay thế các file trùng tên. Quan trọng có **file mới** `app/src/main/java/vn/xacchuot/thu/KhungVideoAI.kt`.
@@ -43,3 +43,10 @@ Bản **0.3** thay thế bản thử tốc độ và bản quay video thường 
 - `app/src/main/java/vn/xacchuot/thu/PhatHien.kt`: giải mã mô hình AI (giữ nguyên).
 - `app/src/main/assets/lan3.tflite`: mô hình huấn luyện (giữ nguyên).
 - `app/build.gradle.kts`: thêm `camera-effects` tương thích với CameraX 1.4.1.
+
+
+---
+
+## Camera AI 0.4 — Tua theo mốc AI và huấn luyện mới
+
+Xem file **`HUONG_DAN_MOC_AI_VA_HUAN_LUYEN.md`**: nút Xem + nhảy đến mốc AI, xuất bảng CSV, chụp ảnh gốc không overlay, và cách trích ảnh/gán nhãn/huấn luyện mô hình mới.

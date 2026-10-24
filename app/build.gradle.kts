@@ -11,8 +11,8 @@ android {
         applicationId = "vn.xacchuot.thu"
         minSdk = 24          // Android 7.0 (Samsung S7 edge)
         targetSdk = 34
-        versionCode = 3
-        versionName = "0.3-ai-video-overlay"
+        versionCode = 4
+        versionName = "0.4-ai-events-seek"
     }
 
     buildTypes {
