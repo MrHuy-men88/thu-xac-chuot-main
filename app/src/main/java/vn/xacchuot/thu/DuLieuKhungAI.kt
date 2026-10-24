@@ -71,7 +71,7 @@ class BoLocBip {
     private var lanBaoCuoi = -1L
 
     @Synchronized fun kiemTra(now: Long = SystemClock.elapsedRealtime(), diem: Float?): Int {
-        if (diem == null || diem < 0.45f) {
+        if (diem == null || diem < QuyTacKhungAI.NGUONG_HIEN_THI) {
             if (lanGap >= 0 && now - lanGap > 2_000L) {
                 soLan = 0; mucDaBao = 0
             }

@@ -80,6 +80,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var trangThaiQuay: TextView
     private lateinit var nutDen: Button
     private lateinit var nutToc: Button
+    private lateinit var nutNhay: Button
     private lateinit var nutQuay: Button
     private lateinit var nutVideo: Button
     private lateinit var nutAnhGoc: Button
@@ -115,6 +116,13 @@ class MainActivity : ComponentActivity() {
         200L to "5 lần/giây",
         500L to "2 lần/giây",
     )
+    // Ngưỡng điểm mô hình (không phải tỷ lệ chính xác). Phát hiện yếu dễ báo nhầm hơn.
+    private val cacMucNhay = listOf(
+        0.30f to "CÂN BẰNG",
+        0.25f to "RẤT NHẠY",
+        0.45f to "ÍT BÁO NHẦM"
+    )
+    private var chiSoNhay = 0
     @Volatile private var chiSoToc = 0
     private var lanQuetCuoi = 0L
 
@@ -166,6 +174,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        chiSoNhay = getSharedPreferences("thu_xac_chuot_ai", MODE_PRIVATE)
+            .getInt("chiSoNhay", 0).coerceIn(0, cacMucNhay.lastIndex)
+        QuyTacKhungAI.NGUONG_HIEN_THI = cacMucNhay[chiSoNhay].first
         dungGiaoDien()
         if (coQuyen(Manifest.permission.CAMERA)) batDauCamera()
         else xinQuyenCamera.launch(Manifest.permission.CAMERA)
@@ -238,6 +249,9 @@ class MainActivity : ComponentActivity() {
         nutToc = taoNut("Quét: ${cacMucToc[0].second}", Color.rgb(0, 132, 130))
         nutToc.setOnClickListener { doiToc() }
         hangPhu.addView(nutToc, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+        nutNhay = taoNut("AI: ${"%.0f".format(Locale.US, cacMucNhay[chiSoNhay].first * 100f)}%", Color.rgb(12, 116, 171))
+        nutNhay.setOnClickListener { doiNhay() }
+        hangPhu.addView(nutNhay, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
         bangNut.addView(hangPhu, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         nutAnhGoc = taoNut("📷 CHỤP ẢNH GỐC ĐỂ HUẤN LUYỆN", Color.rgb(48, 118, 78))
         nutAnhGoc.setOnClickListener { yeuCauChupAnhGoc() }
@@ -403,6 +417,7 @@ class MainActivity : ComponentActivity() {
                         duLieuDangQuay = DuLieuKhungAI()
                         nutQuay.text = "■ DỪNG QUAY"
                         nutQuay.isEnabled = coTheQuetKhiQuay
+                        nutNhay.isEnabled = false // Không đổi ngưỡng giữa video đang quay.
                         trangThaiQuay.text = if (ghiAmDangBat) "● ĐANG QUAY GỐC có âm thanh" else "● ĐANG QUAY GỐC không âm thanh"
                         boDemGio.removeCallbacks(dongHo)
                         boDemGio.post(dongHo)
@@ -418,6 +433,7 @@ class MainActivity : ComponentActivity() {
                         dangDungQuay = false
                         nutQuay.text = "● BẮT ĐẦU QUAY"
                         nutQuay.isEnabled = coTheQuetKhiQuay
+                        nutNhay.isEnabled = true
                         if (!suKien.hasError()) {
                             val uri = suKien.outputResults.outputUri
                             if (uri != Uri.EMPTY) {
@@ -826,6 +842,23 @@ class MainActivity : ComponentActivity() {
     private fun doiToc() {
         chiSoToc = (chiSoToc + 1) % cacMucToc.size
         nutToc.text = "Quét: ${cacMucToc[chiSoToc].second}"
+    }
+
+    /** Đổi ngưỡng hiển thị, tạo mốc và bíp cùng lúc; lưu lựa chọn cho lần mở sau. */
+    private fun doiNhay() {
+        if (quayHienTai != null) {
+            thongBao("Hãy dừng quay trước khi thay đổi độ nhạy.")
+            return
+        }
+        chiSoNhay = (chiSoNhay + 1) % cacMucNhay.size
+        val (nguong, ten) = cacMucNhay[chiSoNhay]
+        QuyTacKhungAI.NGUONG_HIEN_THI = nguong
+        getSharedPreferences("thu_xac_chuot_ai", MODE_PRIVATE)
+            .edit().putInt("chiSoNhay", chiSoNhay).apply()
+        nutNhay.text = "AI: ${"%.0f".format(Locale.US, nguong * 100f)}%"
+        lopPhu.datKetQua(null)
+        thongBao("Độ nhạy: $ten (ngưỡng ${"%.0f".format(Locale.US, nguong * 100f)}%). " +
+            "Ngưỡng thấp có thể phát hiện thêm nhưng dễ báo nhầm.")
     }
 
     override fun onStop() {

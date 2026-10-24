@@ -13,7 +13,8 @@ data class MocAI(
  */
 class ChiMucAI(private val batDauMs: Long) {
     companion object {
-        const val NGUONG_TIN_CAY = 0.45f
+        // Dùng cùng ngưỡng với các khung camera/video để mốc AI không bị mất khi tăng độ nhạy.
+        val NGUONG_TIN_CAY: Float get() = QuyTacKhungAI.NGUONG_HIEN_THI
         const val KHOANG_QUET_LIEN_TIEP_MS = 2_000L
         const val KHOANG_GOP_SU_KIEN_MS = 5_000L
     }
