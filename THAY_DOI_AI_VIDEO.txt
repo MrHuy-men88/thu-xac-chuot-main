@@ -1,0 +1,41 @@
+BẢN 0.3 – VIDEO MP4 CÓ KHUNG PHÁT HIỆN AI
+========================================
+
+Lỗi của bản 0.2:
+- Khung AI chỉ nằm trong View phủ lên màn hình, file MP4 vẫn là video camera thông thường.
+- Nếu điện thoại không hỗ trợ quay + AI đồng thời, app âm thầm tắt AI khi quay.
+
+Đã thay đổi:
+- Thêm KhungVideoAI.kt dùng CameraX OverlayEffect cho cả PREVIEW và VIDEO_CAPTURE.
+  Khung, nhãn lớp, phần trăm tin cậy và trạng thái AI được vẽ trực tiếp vào luồng
+  video TRƯỚC khi CameraX mã hóa ra MP4. Không cần chỉnh sửa hậu kỳ.
+- Chuyển tọa độ AI về hệ tọa độ cảm biến bằng ImageInfo.sensorToBufferTransformMatrix
+  rồi sang từng frame video qua Frame.sensorToBufferTransform (tránh lệch xoay/crop).
+- Ưu tiên video HD; nếu không bind được trên máy cũ thì thử SD.
+- Nếu không hỗ trợ ghi hình + chạy AI + hiệu ứng cùng lúc, nút QUAY bị khóa và app
+  báo rõ – không tạo ra một video chỉ có ảnh camera rồi gọi là video AI.
+- Chặn quay khi mô hình chưa nạp xong; dừng quay khi AI gặp lỗi trong lúc đang ghi.
+- Giữ ghi âm (khi cấp quyền), lưu MP4, danh sách xem/chia sẻ/xóa video,
+  đèn pin, thống kê tốc độ, mô hình lan3.tflite.
+
+ĐƯA LÊN GITHUB
+1. Giải nén thu-xac-chuot-AI-ghi-khung-trong-video.zip
+2. Đưa toàn bộ nội dung thư mục thu-xac-chuot-main lên repo GitHub, giữ đúng đường dẫn.
+3. Vào Actions -> Build APK, đợi xanh rồi tải Artifacts -> app-debug-apk.
+4. Nếu build đỏ, gửi file log của lần chạy mới.
+
+KIỂM TRA SAU KHI CÀI
+1. Cấp quyền CAMERA và micro khi được hỏi; quan sát trạng thái AI.
+2. Khi màn hình thông báo "Sẵn sàng • MP4 ghi khung AI", bấm BẮT ĐẦU QUAY.
+3. Hướng camera vào một cảnh thử có thể nhận diện, bấm DỪNG QUAY.
+4. Mở VIDEO ĐÃ LƯU, xem MP4 ngoài ứng dụng: phải thấy dòng AI và các khung nhận diện
+   (nếu mô hình phát hiện được). Video không chứa giao diện/nút bấm của ứng dụng.
+5. Nếu nút QUAY bị khóa và có dòng "Máy không hỗ trợ ...", dòng máy Android này
+   không đáp ứng đủ tổ hợp CameraX use case. Không có video AI được ghi.
+
+GIỚI HẠN
+- Chưa kiểm tra build trực tiếp trong môi trường này; chưa chạy thử trên Samsung S7 edge.
+- Mô hình có thể nhận diện sai, ngưỡng 0,20 khá thấp; khung hiển thị là dự đoán, không
+  phải chứng cứ chắc chắn rằng có xác chuột hay xác mèo.
+- Kết quả AI có thể chậm hơn hình quay vài trăm mili giây; khung dùng kết quả mới nhất.
+- Phải thử MP4 xuất ra thật, không chỉ nhìn preview, trước khi sử dụng ngoài thực tế.

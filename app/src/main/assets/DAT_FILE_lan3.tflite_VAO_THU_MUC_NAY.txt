@@ -1,0 +1,2 @@
+Chép file lan3.tflite (tải từ Google Drive: xac_chuot/mo_hinh_tflite/lan3) vào thư mục này.
+Tên file phải đúng là: lan3.tflite

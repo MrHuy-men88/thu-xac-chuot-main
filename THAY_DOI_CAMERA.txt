@@ -1,0 +1,14 @@
+CAMERA AI XÁC CHUỘT – BẢN 0.2
+===========================
+Cập nhật:
+  app/build.gradle.kts
+  app/src/main/AndroidManifest.xml
+  app/src/main/java/vn/xacchuot/thu/MainActivity.kt
+  HUONG_DAN.md
+  THAY_DOI_CAMERA.txt (tệp mới)
+
+Thêm: quay/dừng MP4, xin quyền micro và bộ nhớ cũ, lưu trong Movies/ThuXacChuot,
+xem/chia sẻ/xóa video đã quay, đồng hồ quay, chế độ quay dự phòng cho camera cũ.
+
+Giữ nguyên mã nhận diện AI + file mô hình lan3.tflite.
+Lưu ý: khung AI chỉ hiển thị ở preview, KHÔNG nằm trong file MP4.
