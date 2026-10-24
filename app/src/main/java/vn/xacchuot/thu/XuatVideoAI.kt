@@ -9,7 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
-import androidx.media3.common.Effects
+import androidx.media3.transformer.Effects
 import androidx.media3.common.MediaItem
 import androidx.media3.effect.CanvasOverlay
 import androidx.media3.effect.OverlayEffect
@@ -22,7 +22,7 @@ import java.io.File
 import java.util.Locale
 
 /** Overlay theo timestamp của file GỐC. Chỉ file _AI.mp4 mới được vẽ khung. */
-class KhungTheoThoiGian(private val frames: List<MauKhung>) : CanvasOverlay() {
+class KhungTheoThoiGian(private val frames: List<MauKhung>) : CanvasOverlay(true) {
     private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val txt = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = Color.WHITE }
     private val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(205, 0, 0, 0) }
