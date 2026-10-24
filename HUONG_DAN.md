@@ -1,3 +1,9 @@
+# LƯU Ý: PHIÊN BẢN 0.5 — HAI VIDEO + BÍP CẢNH BÁO
+
+**ĐỌC FILE `HUONG_DAN_BAN_0_5_HAI_VIDEO.md` TRƯỚC.** Bản mới một lần quay tạo GỐC sạch và xuất AI riêng sau khi dừng, có phát video lớn và âm báo. Nội dung hướng dẫn 0.4 bên dưới là bản cũ, chỉ để tham khảo.
+
+---
+
 # CAMERA AI XÁC CHUỘT – BẢN 0.3: GHI KHUNG VÀO VIDEO MP4
 
 Bản **0.3** thay thế bản thử tốc độ và bản quay video thường 0.2. Ứng dụng sử dụng `lan3.tflite` để nhận diện `chuot_chet` / `meo_chet`, vẽ khung màu và độ tin cậy **trực tiếp vào hình đang được mã hóa thành video MP4**.

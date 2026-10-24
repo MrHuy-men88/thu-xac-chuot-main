@@ -11,8 +11,8 @@ android {
         applicationId = "vn.xacchuot.thu"
         minSdk = 24          // Android 7.0 (Samsung S7 edge)
         targetSdk = 34
-        versionCode = 4
-        versionName = "0.4-ai-events-seek"
+        versionCode = 5
+        versionName = "0.5-dual-video-alert"
     }
 
     buildTypes {
@@ -50,4 +50,9 @@ dependencies {
 
     // Thư viện chạy mô hình AI (LiteRT, tên mới của TensorFlow Lite)
     implementation("com.google.ai.edge.litert:litert:2.3.0")
+
+    val media3 = "1.10.1"
+    implementation("androidx.media3:media3-common:$media3")
+    implementation("androidx.media3:media3-effect:$media3")
+    implementation("androidx.media3:media3-transformer:$media3")
 }
