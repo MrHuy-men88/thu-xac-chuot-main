@@ -1,0 +1,21 @@
+HUONG DAN SUA LOI BUILD v0.5
+
+Nguon loi: GitHub log logs_108674783902.zip, task :app:compileDebugKotlin
+- XuatVideoAI.kt: import Effects nham package androidx.media3.common
+- XuatVideoAI.kt: constructor CanvasOverlay yeu cau Boolean
+
+Da thay doi:
+  import androidx.media3.transformer.Effects
+  class KhungTheoThoiGian(...) : CanvasOverlay(true) {
+
+CACH A - THAY 1 FILE TREN GITHUB:
+Mo repo -> app/src/main/java/vn/xacchuot/thu/XuatVideoAI.kt
+Chon nut sua (bieu tuong but chi); thay toan bo noi dung bang noi dung
+file XuatVideoAI.kt moi -> Commit changes.
+
+CACH B - THAY TOAN BO DU AN:
+Tai va giai nen ZIP ban day du, thay cac file cu tren GitHub.
+Khong tai them thu muc goc long nhau.
+
+Chay Actions -> Build APK. Neu con loi, tai ZIP log moi.
+Luu y: Kiem tra tinh nang ghi va xuat AI MP4 tren Samsung S7 Edge; chua thu thiet bi that.

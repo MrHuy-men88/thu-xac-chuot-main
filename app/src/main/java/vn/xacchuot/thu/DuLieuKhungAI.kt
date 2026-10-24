@@ -17,7 +17,9 @@ class DuLieuKhungAI {
     @Synchronized fun them(ms: Long, kq: KetQuaQuet) {
         if (ms < 0 || (lucCuoi >= 0 && ms - lucCuoi < 250L)) return
         lucCuoi = ms
-        khung.add(MauKhung(ms, kq.khung.map {
+        // Chỉ lưu khung có ý nghĩa giống trên màn hình, nhưng vẫn lưu frame rỗng
+        // để bộ xuất video biết lúc nào phải DỪNG vẽ khung cũ.
+        khung.add(MauKhung(ms, QuyTacKhungAI.loc(kq).map {
             BoxLuu(it.lop, it.tinCay, it.x1, it.y1, it.x2, it.y2)
         }))
     }

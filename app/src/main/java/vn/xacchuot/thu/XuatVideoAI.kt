@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.PorterDuff
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -28,6 +29,9 @@ class KhungTheoThoiGian(private val frames: List<MauKhung>) : CanvasOverlay(true
     private val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(205, 0, 0, 0) }
 
     override fun onDraw(canvas: Canvas, presentationTimeUs: Long) {
+        // Media3 CanvasOverlay TÁI SỬ DỤNG cùng Bitmap/Canvas giữa các frame.
+        // Nếu không CLEAR, khung của các lần phát hiện trước sẽ chồng mãi lên video.
+        canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
         if (frames.isEmpty()) return
         val ms = presentationTimeUs / 1000L
         var lo = 0
@@ -40,7 +44,7 @@ class KhungTheoThoiGian(private val frames: List<MauKhung>) : CanvasOverlay(true
         }
         if (found < 0) return
         val frame = frames[found]
-        if (ms - frame.ms > 1200L || frame.boxes.isEmpty()) return
+        if (ms - frame.ms > 900L || frame.boxes.isEmpty()) return
         val w = canvas.width.toFloat()
         val h = canvas.height.toFloat()
         val font = (minOf(w, h) * 0.038f).coerceIn(15f, 38f)

@@ -11,8 +11,8 @@ android {
         applicationId = "vn.xacchuot.thu"
         minSdk = 24          // Android 7.0 (Samsung S7 edge)
         targetSdk = 34
-        versionCode = 5
-        versionName = "0.5-dual-video-alert"
+        versionCode = 6
+        versionName = "0.6-live-overlay-fix"
     }
 
     buildTypes {

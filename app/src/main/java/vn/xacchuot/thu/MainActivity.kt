@@ -299,6 +299,7 @@ class MainActivity : ComponentActivity() {
             try {
                 val provider = future.get()
                 cameraProvider = provider
+                lopPhu.datKetQua(null)
                 videoCapture = null
                 coTheQuetKhiQuay = false
                 nutQuay.isEnabled = false
@@ -733,6 +734,7 @@ class MainActivity : ComponentActivity() {
             phatBip(locBip.kiemTra(thoiGian, diemChuot))
             capNhatSoDo(kq, bo)
         } catch (e: Throwable) {
+            lopPhu.datKetQua(null) // Không để khung cũ nếu bộ AI gặp lỗi.
             loiNap = "${e.javaClass.simpleName}: ${e.message}"
             hienChu("LỖI KHI QUÉT\n$loiNap")
             runOnUiThread {
@@ -773,14 +775,25 @@ class MainActivity : ComponentActivity() {
             demQuet = 0
             mocDem = bay
         }
-        if (!coTheQuetKhiQuay) lopPhu.datKetQua(kq)
+        // PHẢI cập nhật khung trên camera cả khi hỗ trợ quay video + AI.
+        // Bản cũ vô tình chỉ vẽ khi KHÔNG thể vừa quay vừa quét.
+        lopPhu.datKetQua(kq)
         if (bay - lanCapNhatChu < 500) return
         lanCapNhatChu = bay
         val nhiet = docNhietPin()
         if (nhietDau < 0f) nhietDau = nhiet
         val giay = (bay - batDau) / 1000
-        val thay = if (kq.khung.isEmpty()) "không thấy gì" else
-            "${kq.khung.size} khung, cao nhất ${"%.2f".format(kq.khung.maxOf { it.tinCay })}"
+        val hienThi = QuyTacKhungAI.loc(kq)
+        val thay = if (hienThi.isEmpty()) "không phát hiện rõ" else
+            "${hienThi.size} khung, cao nhất ${"%.0f".format(Locale.US, hienThi.maxOf { it.tinCay } * 100f)}%"
+        if (quayHienTai != null) {
+            // Khi quay, để vùng camera nhìn được rõ: không phủ bảng số liệu 5 dòng.
+            val chuot = hienThi.filter { it.lop == 0 }.maxOfOrNull { it.tinCay }
+            hienChu(if (chuot != null)
+                "AI TRỰC TIẾP: XÁC CHUỘT ${"%.0f".format(Locale.US, chuot * 100f)}%"
+                else "AI TRỰC TIẾP: $thay")
+            return
+        }
         val kieuToaDo = if (kq.toaDoChuanHoa) "0-1" else "điểm ảnh"
         hienChu(
             "Mô hình: ${bo.nguonMoHinh}\n" +
@@ -816,6 +829,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
+        lopPhu.datKetQua(null)
         super.onStop()
         // Không hỗ trợ ghi hình ngầm: kết thúc video khi rời khỏi ứng dụng.
         if (quayHienTai != null && !dangDungQuay) {
